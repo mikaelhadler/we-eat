@@ -1,58 +1,69 @@
 import axios from 'axios';
+import { getProxyUrl, getGeocodeUrl } from './api';
 
+interface PlacesResponse {
+  status?: string;
+  results?: unknown[];
+}
 
-const API_BASE = "https://proxy-server-we-eat-e24e32c11d10.herokuapp.com";
+interface GeocodeResponse {
+  lat?: number;
+  lng?: number;
+  status?: string;
+  results?: Array<{
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+  }>;
+}
 
-
-const PROXY_PLACES_URL = `${API_BASE}/proxy`;
-const PROXY_GEOCODE_URL = `${API_BASE}/geocode`;
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
 
 export const fetchRestaurantsFromGooglePlaces = async (
   lat: number,
   lng: number,
   radius: number,
   keyword: string
-) => {
-  try {
-    const response = await axios.get(PROXY_PLACES_URL, {
-      params: {
-        location: `${lat},${lng}`,
-        radius,
-        keyword,
-        type: 'restaurant',
-       
-      },
-    });
+): Promise<unknown[]> => {
+  const response = await axios.get<PlacesResponse>(getProxyUrl(), {
+    params: {
+      location: `${lat},${lng}`,
+      radius,
+      keyword,
+      type: 'restaurant',
+    },
+  });
 
-    if (response.data.status && response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-      throw new Error(`Error from Google Places via proxy: ${response.data.status}`);
-    }
-
-    return response.data.results ?? response.data;
-  } catch (error: unknown) {
-    console.error('Axios error message:', (error as Error).message);
-    throw error;
+  if (response.data.status && response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+    throw new Error(`Error from Google Places via proxy: ${response.data.status}`);
   }
+
+  return response.data.results ?? [];
 };
 
-export const getCoordinatesFromAddress = async (address: string) => {
+export const getCoordinatesFromAddress = async (address: string): Promise<Coordinates | null> => {
   try {
-    const response = await axios.get(PROXY_GEOCODE_URL, {
+    const response = await axios.get<GeocodeResponse>(getGeocodeUrl(), {
       params: { address },
     });
-   
+
     if (response.data?.lat != null && response.data?.lng != null) {
       return { lat: response.data.lat, lng: response.data.lng };
     }
-    
-    if (response.data?.status === 'OK') {
+
+    if (response.data?.status === 'OK' && response.data.results?.[0]) {
       const { lat, lng } = response.data.results[0].geometry.location;
       return { lat, lng };
     }
-    console.error('Error fetching coordinates:', response.data?.status || response.status);
+
     return null;
-  } catch (error) {
-    console.error('Error fetching coordinates:', error);
+  } catch {
     return null;
   }
 };

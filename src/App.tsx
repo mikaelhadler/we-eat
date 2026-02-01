@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isPlatform } from '@ionic/react';
 import { Redirect, Route, Switch, useHistory, useLocation } from 'react-router-dom';
 import {
@@ -13,16 +13,18 @@ import {
   IonLoading,
   IonMenuButton,
   IonHeader,
-  IonToolbar, 
-  IonButton,
-  IonButtons
+  IonToolbar,
+  IonButtons,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { homeSharp, person, searchOutline, compassOutline } from 'ionicons/icons';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import { AuthProvider, useAuth } from './contexts/authContext';
 import SlideMenu from './components/SlideMenu';
+import PrivateRoute from './components/PrivateRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+
 import LoginPage from './pages/LoginPage';
 import CreateAccountPage from './pages/CreateAccount';
 import HomePage from './pages/HomePage';
@@ -31,16 +33,15 @@ import PasswordResetPage from './pages/PasswordReset';
 import RestaurantPage from './pages/RestaurantPage';
 import EditProfilePage from './pages/EditProfilePage';
 import PersonalizedMenuPage from './pages/PersonalizedMenu';
-import PrivateRoute from './components/PrivateRoute';
 import CreateMenuPage from './pages/CreateMenuPage';
 import SearchPage from './pages/SearchPage';
-import ErrorBoundary from './components/ErrorBoundary';
 import SavedMenuPage from './pages/SavedMenuPage';
 import CreatedMenuPage from './pages/CreatedMenuPage';
 import RecommendationsPage from './pages/RecommendationsPage';
 import AddDishesPage from './pages/AddDishesPage';
 import AllRestaurantsPage from './pages/AllRestaurantsPage';
 import LandingPage from './pages/LandingPage';
+
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -53,15 +54,18 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 import './theme/variables.css';
+import './styles/App.css';
 import './styles/UserProfile.css';
 import './styles/HomePage.css';
 import './styles/PersonalizedMenu.css';
 import './styles/RestaurantPage.css';
-import './styles/CreatedMenu..css';
+import './styles/CreatedMenu.css';
 import './styles/SlideMenu.css';
 import './styles/LandingPage.css';
 
 setupIonicReact();
+
+const PUBLIC_PATHS = ['/', '/login', '/create-account', '/password-reset'];
 
 const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -70,105 +74,85 @@ const AppContent: React.FC = () => {
   const { currentUser } = useAuth();
 
   useEffect(() => {
-
     if (isPlatform('hybrid') && window.location.pathname === '/') {
       history.replace('/login');
       setIsLoading(false);
       return;
     }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoading(false); 
+      setIsLoading(false);
+
       if (user) {
-        if (location.pathname === '/login' || location.pathname === '/create-account') {
+        const authPaths = ['/login', '/create-account'];
+        if (authPaths.includes(location.pathname)) {
           history.push('/home');
         }
       } else {
         const currentPath = window.location.pathname;
-        const publicPaths = ['/', '/login', '/create-account', '/password-reset'];
-        if (!publicPaths.includes(currentPath)) {
+        if (!PUBLIC_PATHS.includes(currentPath)) {
           sessionStorage.setItem('redirectPath', currentPath);
           history.push('/login');
         }
-
       }
     });
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [history, location.pathname]);
-
-  const handleSignOut = () => {
-    signOut(auth).then(() => {
-      sessionStorage.setItem('redirectPath', '/login');
-      history.push('/login');
-    });
-  };
 
   if (isLoading) {
     return <IonLoading isOpen={isLoading} message="Loading..." />;
   }
 
+  if (!currentUser) {
+    return (
+      <IonRouterOutlet id="main-content">
+        <Switch>
+          <Route path="/login" component={LoginPage} exact />
+          <Route path="/create-account" component={CreateAccountPage} exact />
+          <Route path="/password-reset" component={PasswordResetPage} exact />
+          <Route path="/" component={LandingPage} exact />
+        </Switch>
+      </IonRouterOutlet>
+    );
+  }
+
   return (
     <>
-      {currentUser && <SlideMenu />}
+      <SlideMenu />
+      <IonHeader>
+        <IonToolbar className="app-header-toolbar">
+          <IonButtons slot="start">
+            <IonMenuButton className="app-header-menu-button" />
+          </IonButtons>
+          <div className="app-header-content">
+            <img
+              src="/assets/WeEat_logo_transparent.webp"
+              alt="WeEat Logo"
+              className="app-logo"
+            />
+          </div>
+        </IonToolbar>
+      </IonHeader>
 
-      {currentUser && (
-        <IonHeader>
-          <IonToolbar
-            style={{
-              backgroundColor: '#02382E',
-              color: '#FFFFFF',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <IonButtons slot="start" style={{ fontSize: '1.5em' }}>
-              <IonMenuButton style={{ fontSize: '1.5em' }} />
-            </IonButtons>
-            <div
-              className="toolbar-content"
-              style={{
-                flex: 1,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <img
-                src="/assets/WeEat_logo_transparent.webp"
-                alt="WeEat Logo"
-                className="app-logo"
-                style={{ height: '55px', marginTop: '20px', marginBottom: '20px', bottom: 0 }}
-              />
-            </div>
-          </IonToolbar>
-        </IonHeader>
-      )}
-      {currentUser && (
-        <IonButton onClick={handleSignOut} color="danger">
-          Sign Out
-        </IonButton>
-      )}
-      {currentUser ? (
       <IonTabs>
         <IonRouterOutlet id="main-content">
           <Switch>
             <Route exact path="/">
-              <Redirect to="/home" /> 
+              <Redirect to="/home" />
             </Route>
             <Route exact path="/login">
-              <Redirect to="/home"/>
+              <Redirect to="/home" />
             </Route>
             <Route path="/create-account">
-              <Redirect to="/home"/>
+              <Redirect to="/home" />
             </Route>
             <Route path="/password-reset" component={PasswordResetPage} exact />
+
             <PrivateRoute path="/home" component={HomePage} exact />
             <PrivateRoute path="/personalized-menu" component={PersonalizedMenuPage} exact />
             <PrivateRoute path="/create-menu" component={CreateMenuPage} exact />
-            <PrivateRoute exact path="/add-dishes/:menuId" component={AddDishesPage} />
+            <PrivateRoute path="/add-dishes/:menuId" component={AddDishesPage} exact />
             <PrivateRoute path="/restaurants/:restaurantId/full" component={RestaurantPage} exact />
             <PrivateRoute path="/saved-menus/:savedMenuDocId" component={SavedMenuPage} exact />
             <PrivateRoute path="/created-menus/:menuDocId" component={CreatedMenuPage} exact />
@@ -177,7 +161,7 @@ const AppContent: React.FC = () => {
             <PrivateRoute path="/restaurant/:restaurantName/create" component={CreateMenuPage} />
             <PrivateRoute path="/edit-profile" component={EditProfilePage} exact />
             <PrivateRoute path="/recommendations" component={RecommendationsPage} exact />
-            
+
             <PrivateRoute path="/profile">
               <ErrorBoundary>
                 <UserProfilePage />
@@ -185,15 +169,8 @@ const AppContent: React.FC = () => {
             </PrivateRoute>
           </Switch>
         </IonRouterOutlet>
-        <IonTabBar
-          slot="bottom"
-          style={{
-            display: currentUser ? 'flex' : 'none',
-            '--background': 'var(--ion-tab-bar-background-color)',
-            '--color': 'var(--ion-tab-bar-color)',
-            '--color-selected': 'var(--ion-tab-bar-selected-color)',
-          }}
-        >
+
+        <IonTabBar slot="bottom">
           <IonTabButton tab="home" href="/home">
             <IonIcon icon={homeSharp} />
             <IonLabel className="tab-bar-label">Home</IonLabel>
@@ -203,30 +180,21 @@ const AppContent: React.FC = () => {
             <IonIcon icon={searchOutline} />
             <IonLabel className="tab-bar-label">Search</IonLabel>
           </IonTabButton>
+
           <IonTabButton tab="recommendations" href="/recommendations">
             <IonIcon aria-hidden="true" icon={compassOutline} />
             <IonLabel className="tab-bar-label">Explore</IonLabel>
           </IonTabButton>
+
           <IonTabButton tab="profile" href="/profile">
             <IonIcon icon={person} />
             <IonLabel className="tab-bar-label">Profile</IonLabel>
           </IonTabButton>
         </IonTabBar>
       </IonTabs>
-      ) : (
-        <IonRouterOutlet id = "main-content">
-          <Switch>
-            <Route path="/login" component={LoginPage} exact />
-            <Route path="/create-account" component={CreateAccountPage} exact />
-            <Route path="/password-reset" component={PasswordResetPage} exact />
-            <Route path="/" component={LandingPage} exact />
-          </Switch>
-        
-        </IonRouterOutlet>
-      )}
     </>
-  )};
-
+  );
+};
 
 const App: React.FC = () => {
   return (
