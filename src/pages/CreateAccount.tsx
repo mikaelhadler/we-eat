@@ -77,7 +77,7 @@ const CreateAccountPage: React.FC = () => {
         password
       );
       const user = userCredential.user;
-      let profileImageUrl = PROFILE_PLACEHOLDER;
+      let profileImageUrl: string = PROFILE_PLACEHOLDER;
 
       if (profileFile) {
         

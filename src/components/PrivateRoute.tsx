@@ -1,13 +1,29 @@
-import React from "react";
-import { Route, Redirect } from "react-router-dom";
-import { auth } from "../firebaseConfig";
+import { Route, Redirect, RouteProps } from 'react-router-dom';
+import { auth } from '../firebaseConfig';
 
-const PrivateRoute = ({ component: Component, ...rest }: any) => (
+interface PrivateRouteProps extends Omit<RouteProps, 'component'> {
+  component?: React.ComponentType<RouteProps>;
+  children?: React.ReactNode;
+}
+
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  component: Component,
+  children,
+  ...rest
+}) => (
   <Route
     {...rest}
-    render={(props) =>
-      auth.currentUser ? <Component {...props} /> : <Redirect to="/login" />
-    }
+    render={(props) => {
+      if (!auth.currentUser) {
+        return <Redirect to="/login" />;
+      }
+
+      if (Component) {
+        return <Component {...props} />;
+      }
+
+      return children;
+    }}
   />
 );
 

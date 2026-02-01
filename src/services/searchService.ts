@@ -1,83 +1,123 @@
-
 import axios from 'axios';
-import {apiUrl, API_BASE} from './api';
+import { getProxyUrl, getPhotoUrl } from './api';
 
+interface GooglePlaceResult {
+  name: string;
+  vicinity?: string;
+  formatted_address?: string;
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  place_id?: string;
+  icon?: string;
+  photos?: Array<{
+    photo_reference: string;
+  }>;
+}
 
+export interface SearchResult {
+  name: string;
+  vicinity: string;
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  placeId?: string;
+  distance: number;
+  icon?: string;
+  photoReference?: string;
+  photoUrl: string;
+}
 
-const cache: Record<string, any[]> = {};
+interface UserLocation {
+  lat: number;
+  lng: number;
+}
+
+const cache: Record<string, SearchResult[]> = {};
+
+const EARTH_RADIUS_MILES = 3958.8;
+const METERS_PER_MILE = 1609.34;
 
 const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 3958.8;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const toRadians = (deg: number) => deg * (Math.PI / 180);
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
     Math.sin(dLon / 2) ** 2;
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  return EARTH_RADIUS_MILES * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
+const createCacheKey = (location: string, radius: number, keyword: string): string =>
+  `${location}|${radius}|${keyword}`;
+
+const formatSearchResult = (result: GooglePlaceResult, userLocation: UserLocation): SearchResult => {
+  const distance = result.geometry?.location
+    ? haversineDistance(
+        userLocation.lat,
+        userLocation.lng,
+        result.geometry.location.lat,
+        result.geometry.location.lng
+      )
+    : NaN;
+
+  const photoReference = result.photos?.[0]?.photo_reference;
+
+  return {
+    name: result.name,
+    vicinity: result.vicinity || result.formatted_address || '',
+    geometry: result.geometry,
+    placeId: result.place_id,
+    distance,
+    icon: result.icon,
+    photoReference,
+    photoUrl: photoReference ? getPhotoUrl(photoReference) : '',
+  };
 };
 
 export const searchRestaurants = async (
   location: string,
   radius: number,
   keyword: string,
-  userLocation: { lat: number; lng: number; }
-) => {
-  const key = `${location}|${radius}|${keyword}`;
+  userLocation: UserLocation
+): Promise<SearchResult[]> => {
+  const cacheKey = createCacheKey(location, radius, keyword);
 
-  if (cache[key]) {
-    console.log(`[CACHE HIT] ${keyword} @ ${location} within ${radius}mi`);
-    return cache[key];
+  if (cache[cacheKey]) {
+    return cache[cacheKey];
   }
-
-  console.log(`[CACHE MISS] fetching ${keyword} @ ${location} within ${radius}mi`);
-  let allResults: any[] = [];
 
   try {
     const params = {
       location,
-      radius: radius * 1609.34,
+      radius: radius * METERS_PER_MILE,
       keyword,
       type: 'restaurant',
       fields: 'name,geometry,icon,photos,vicinity',
     };
-    console.log("API_BASE", API_BASE);
-    console.log("proxyUrl", apiUrl('/proxy'));
-    const { data } = await axios.get(apiUrl('/proxy'), { params });
-    allResults = data.results || [];
-    console.log(`[PROXY] returned ${allResults.length} results for "${keyword}"`);
-  } catch (err) {
-    console.error(`[PROXY ERROR] "${keyword}"`, err);
+
+    const { data } = await axios.get<{ results?: GooglePlaceResult[] }>(getProxyUrl(), { params });
+    const results = data.results || [];
+
+    const formatted = results
+      .map(result => formatSearchResult(result, userLocation))
+      .filter(item => !isNaN(item.distance) && item.distance <= radius + 1)
+      .sort((a, b) => a.distance - b.distance);
+
+    cache[cacheKey] = formatted;
+    return formatted;
+  } catch {
+    return [];
   }
+};
 
-  const formatted = allResults
-    .map(r => {
-
-      const dist = r.geometry?.location
-        ? haversineDistance(
-            userLocation.lat,
-            userLocation.lng,
-            r.geometry.location.lat,
-            r.geometry.location.lng
-          )
-        : NaN;
-      const ref = r.photos?.[0]?.photo_reference;
-      return {
-        name: r.name,
-        vicinity: r.vicinity || r.formatted_address || '',
-        geometry: r.geometry,
-        placeId: r.place_id,
-        distance: dist,
-        icon: r.icon,
-        photoReference: ref,
-        photoUrl: ref ? apiUrl(`/photo?photoreference=${ref}&maxwidth=400`) : ""
-      };
-    })
-    .filter(item => !isNaN(item.distance) && item.distance <= radius + 1)
-    .sort((a, b) => a.distance - b.distance);
-
-  console.log(`[FORMAT] ${formatted.length} items after filtering/sorting for "${keyword}"`);
-
-  cache[key] = formatted;
-  return formatted;
+export const clearSearchCache = (): void => {
+  Object.keys(cache).forEach(key => delete cache[key]);
 };

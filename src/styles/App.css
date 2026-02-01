@@ -1,0 +1,28 @@
+.app-header-toolbar {
+  --background: var(--ion-color-primary);
+  --color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-header-menu-button {
+  font-size: 1.5em;
+}
+
+.app-header-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-logo {
+  height: 55px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.tab-bar-label {
+  font-size: 0.75rem;
+}

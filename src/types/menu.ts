@@ -1,4 +1,3 @@
-// Interfaces for Menu related objects
 export interface MenuItem {
   id?: string;
   name: string;
@@ -10,13 +9,12 @@ export interface MenuItem {
 }
 
 export interface MenuCategory {
-    id?:string;
-    category: string;
-    items: MenuItem[];
-    index:number;
+  id?: string;
+  category: string;
+  items: MenuItem[];
+  index: number;
 }
 
-// Used to add dishes to restaurants for first time
 export interface Dish {
   id?: string;
   category: string;
@@ -27,11 +25,9 @@ export interface Dish {
   imageUrl?: string;
 }
 
-// Parent class of child CreatedMenu and SavedMenu objects in 
-// PersonalizedMenu
 export interface BaseMenu {
   restaurantName: string;
-  dishes: any[];
+  dishes: MenuItem[];
   photoUrl?: string;
   thumbnailUrl?: string;
   dishCount?: number;
@@ -39,8 +35,22 @@ export interface BaseMenu {
 }
 
 export interface Restaurant {
-    id: string;
-    name: string;
-    menu: MenuCategory[];
-    thumbnailUrl: string;
+  id: string;
+  name: string;
+  menu: MenuCategory[];
+  thumbnailUrl: string;
+}
+
+export interface SavedMenuData {
+  restaurantName: string;
+  restaurantId?: string;
+  thumbnailUrl?: string;
+  photoUrl?: string;
+}
+
+export interface CreatedMenuData {
+  restaurantName: string;
+  restaurantId?: string;
+  thumbnailUrl?: string;
+  photoUrl?: string;
 }
