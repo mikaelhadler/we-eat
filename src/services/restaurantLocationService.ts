@@ -3,6 +3,22 @@ import { db, auth } from '../firebaseConfig';
 import { fetchRestaurantsFromGooglePlaces, getCoordinatesFromAddress } from './googlePlacesService';
 import { searchRestaurants } from './searchService';
 
+interface GooglePlaceResult {
+  name: string;
+  vicinity?: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  address_components?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
+}
+
 export const addRestaurantsToFirestore = async (lat: number, lng: number, radius: number, keywords: string[]) => {
   try {
     for (const keyword of keywords) {
@@ -198,10 +214,14 @@ export const fetchZipCode = async (street: string, city: string, state: string):
     const restaurants = await fetchRestaurantsFromGooglePlaces(coordinates.lat, coordinates.lng, 1000, 'restaurant');
 
     if (restaurants.length > 0) {
-      const restaurant = restaurants[0];
+      const restaurant = restaurants[0] as GooglePlaceResult;
       const addressComponents = restaurant.address_components;
 
-      const postalCodeComponent = addressComponents.find((component: any) =>
+      if (!addressComponents) {
+        return null;
+      }
+
+      const postalCodeComponent = addressComponents.find((component) =>
         component.types.includes('postal_code')
       );
 

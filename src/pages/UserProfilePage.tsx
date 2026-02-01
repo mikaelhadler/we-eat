@@ -30,7 +30,7 @@ import { searchRestaurants } from "../services/searchService";
 import "../styles/UserProfile.css";
 import "ionicons/icons";
 import { personCircleOutline, locationSharp } from "ionicons/icons";
-import { PreferredLocation, UserData } from "../types/user";
+import { PreferredLocation, UserData, CreatedMenuReference } from "../types/user";
 
 
 
@@ -118,8 +118,10 @@ const UserProfilePage: React.FC = () => {
             const createdMenusSnap = await getDocs(
               collection(userDocRef, "createdMenus")
             );
-            createdMenusSnap.forEach((doc) => {
-              userData.createdMenus[doc.id] = doc.data();
+            createdMenusSnap.forEach((menuDoc) => {
+              if (userData.createdMenus) {
+                userData.createdMenus[menuDoc.id] = menuDoc.data() as CreatedMenuReference;
+              }
             });
 
             setUserData(userData);

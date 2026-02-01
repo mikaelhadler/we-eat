@@ -8,6 +8,7 @@ export interface AllergenState {
   shellfish: boolean;
   peanuts: boolean;
   gluten: boolean;
+  [key: string]: boolean;
 }
 
 export const DEFAULT_ALLERGENS_STATE: AllergenState = {

@@ -191,7 +191,7 @@ const EditProfilePage: React.FC = () => {
               checked={allergens[key]}
               onIonChange={e => setAllergen(key, e.detail.checked)}
             />
-            <IonLabel>{key.replace("_", " ")}</IonLabel>
+            <IonLabel>{String(key).replace("_", " ")}</IonLabel>
           </IonItem>
         ))}
         

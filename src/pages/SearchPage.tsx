@@ -38,17 +38,18 @@ import "../styles/SearchPage.css";
 interface Place {
   name: string;
   vicinity: string;
-  geometry: {
+  geometry?: {
     location: {
       lat: number;
       lng: number;
     };
   };
-  placeId?:string;
+  placeId?: string;
   address?: string;
   coordinates?: GeoPoint;
   distance: number;
-  icon: string;
+  icon?: string;
+  photoReference?: string;
   photoUrl: string;
 }
 
@@ -214,6 +215,10 @@ const handleNavigateToRestaurantPage = async (place: Place) => {
       );
       const q = query(preferredLocationsRef, where("name", "==", place.name));
       const querySnapshot = await getDocs(q);
+
+      if (!place.geometry) {
+        throw new Error("Place geometry is missing");
+      }
 
       const geoPoint = new GeoPoint(
         place.geometry.location.lat,

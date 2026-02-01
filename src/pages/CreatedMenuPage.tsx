@@ -27,7 +27,7 @@ import EditMenuItemModal from "../components/EditMenuItemModal";
 import AddMenuItemModal from "../components/AddMenuItemModal";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
-import "../styles/CreatedMenu..css";
+import "../styles/CreatedMenu.css";
 import { addOutline } from "ionicons/icons";
 import { PreferredLocation, UserData } from "../types/user";
 
